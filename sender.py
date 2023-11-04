@@ -42,13 +42,13 @@ def main():
           offset = seqNum * chunkSize
           errcode = check4Nack(fileName, offset)
 
-          #checkWindow()
+          if checkWindow():
 
           with open(fileName, 'rb') as file:
                file.seek(offset)
                print(offset)
-               data = file.read(chunkSize - 25) 
-               resp = pickle.dumps((errcode, len(data), data))
+               data = file.read(chunkSize - 29) 
+               resp = pickle.dumps((errcode, seqNum, len(data), data))
                #print(resp)
         
                serverReply(resp)
@@ -74,14 +74,14 @@ def serverReply(resp):
   print(rand)
   if rand >=3:
       print("tentou mandar")
-      #window[seqNum]
+      window[seqNum] = pickle.loads(resp)
       seqNum += 1
       UDPServerSocket.sendto(resp, client_address)
   
 
 
-#def checkWindow():
-    
+def checkWindow():
+     
 
 
 main()
