@@ -17,23 +17,32 @@ ack = 0 # All good to go
 client_address = 0
 
 
+window = []
+windowSize = 4
+seqNum = 0
+
+
 def main():
     global client_address
+    global seqNum
     print("UDP server up and listening")
     #localPort = int(sys.argv[1])
 
     UDPServerSocket.bind((localIP, localPort))
 
+    bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)#Recieves the dumped request from the client
+    message = bytesAddressPair[0]  
+    client_address = bytesAddressPair[1]
+
+    request=pickle.loads(message)#loads the dumped request from the client
+    fileName, chunkSize = request
+
     while(True):
       
-          bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)#Recieves the dumped request from the client
-          message = bytesAddressPair[0]  
-          client_address = bytesAddressPair[1]
-
-          request=pickle.loads(message)#loads the dumped request from the client
-          fileName , offset , chunkSize = request
-
+          offset = seqNum * chunkSize
           errcode = check4Nack(fileName, offset)
+
+          #checkWindow()
 
           with open(fileName, 'rb') as file:
                file.seek(offset)
@@ -59,12 +68,21 @@ def check4Nack(fileName, offset):
      
 
 def serverReply(resp):
+  global seqNum
+
   rand = random.randint(0,10)
   print(rand)
   if rand >=3:
       print("tentou mandar")
+      #window[seqNum]
+      seqNum += 1
       UDPServerSocket.sendto(resp, client_address)
   
+
+
+#def checkWindow():
+    
+
 
 main()
 

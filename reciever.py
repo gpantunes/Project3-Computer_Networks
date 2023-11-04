@@ -41,12 +41,12 @@ def main():
     #serverAddressPort = (("127.0.0.1", serverPort))
 
     with open(getFileName(), 'wb') as file:
-        chunkOffset = 0
+        
+        request = pickle.dumps((fileName, chunkSize)) 
+        UDPClientSocket.sendto(request, serverAddressPort)
 
         while(True):
-            request = pickle.dumps((fileName, chunkOffset, chunkSize)) 
-            UDPClientSocket.sendto(request, serverAddressPort)
-
+            
             print("inicio")
             if waitForReply():
 
@@ -65,7 +65,6 @@ def main():
                     print("Invalid offset")
                 else:      
                     file.write(bytesTransferred[2])
-                    chunkOffset += bytesTransferred[1]
                     print(bytesTransferred[1] + 25)
                     if bytesTransferred[1] + 25 < chunkSize:
                         break
