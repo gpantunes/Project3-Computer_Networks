@@ -6,7 +6,7 @@ import sys
 
 localIP     = "127.0.0.1"
 localPort = 20001
-bufferSize = 32768
+bufferSize = 1024
 
 UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM) 
 
@@ -59,9 +59,9 @@ def check4Nack(fileName, offset):
      
 
 def serverReply(resp):
-  rand = random.randint(0,9)
+  rand = random.randint(0,10)
   print(rand)
-  if rand >=1:
+  if rand >=3:
       print("tentou mandar")
       UDPServerSocket.sendto(resp, client_address)
   
