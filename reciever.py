@@ -9,6 +9,7 @@ serverAddressPort   = ("127.0.0.1", 20001)
 chunkSize = 4096
 chunkOffset = 0
 
+
 UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)  #Create UDP client socket
 
 
@@ -22,7 +23,7 @@ packet_paylod = []
 
 slidingWindow ={
     "key": current,
-    "packet": packet_paylod[current]
+    "packet": packet_paylod
 }
 
 
@@ -44,16 +45,16 @@ def main():
     global serverAddressPort
 
 
-    receiverIP = int(sys.argv[1])
+    #receiverIP = #int(sys.argv[1])
 
-    receiverPort = int(sys.argv[2])
+    #receiverPort = int(sys.argv[2])
 
-    fileName = int(sys.argv[3])
+    fileName = getFileName() #int(sys.argv[3])
 
     #serverAddressPort = (("127.0.0.1", serverPort))
 
-    if not os.path.exists(fileName):
-        print(f"nack1{nack1} - File name provided doesn't exist")
+    if os.path.exists(fileName):
+        print(f"nack1{nack1} - File name provided already exist")
         sys.exit() # Forcely exit
 
 

@@ -20,28 +20,31 @@ client_address = 0
 # Dictionary Sliding window
 current = 0
 packet_payload = []
+packetSize = 0
+
 slidingWindow ={
      "key": current,
-     "packet": packet_payload[current]
+     "packet": packet_payload,
+     "packetSize" : 0 
 }
 
 
 def main():
-    global client_address, current, packet_payload
+    global client_address, current, packet_payload, packetSize
     print("UDP server up and listening")
     #localPort = int(sys.argv[1])
 
-    senderIP = int(sys.argv[1])
+    #senderIP = int(sys.argv[1])
 
-    senderPort = int(sys.argv[2])
+    #senderPort = int(sys.argv[2])
 
-    receiverIP = int(sys.argv[3])
+    #receiverIP = int(sys.argv[3])
 
-    receiverPort = int(sys.argv[4])
+    #receiverPort = int(sys.argv[4])
 
-    fileName = sys.argv[5]
+    fileName = "pila.txt" #sys.argv[5]
 
-    windowSizeInBlocks = int(sys.argv[6])
+    windowSizeInBlocks = 4#int(sys.argv[6])
 
 
     UDPServerSocket.bind((localIP, localPort))
@@ -58,6 +61,9 @@ def main():
      data = file.read()    
      # Create an array in each element has maximum 1024b of info
      packet_payload = [data[i:i+1024] for i in range(0, len(data), 1024)]
+
+     packetSize = len(packet_payload)
+
 
 
     while(True):
@@ -87,14 +93,12 @@ def main():
           serverReply(resp)
      
 
+#void 
 def dealWithLostChilds(lostChild):
      global current
      current = lostChild
-     return 0  
+ 
 
-
-
-     
 
 def serverReply(resp):
   rand = random.randint(0,10)
