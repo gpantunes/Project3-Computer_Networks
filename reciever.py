@@ -12,7 +12,6 @@ fileName = "pila.txt"
 
 UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)  #Create UDP client socket
 
-
 nack1 = 1 # File does not exist
 nack2 = 2 # Invalid offset
 ack = 0 # All good to go
@@ -41,17 +40,18 @@ def main():
     #serverAddressPort = (("127.0.0.1", serverPort))
 
     with open(getFileName(), 'wb') as file:
-        chunkOffset = 0
+        
+        request = pickle.dumps((fileName, chunkSize)) 
+        UDPClientSocket.sendto(request, serverAddressPort)
 
         while(True):
-            request = pickle.dumps((fileName, chunkOffset, chunkSize)) 
-            UDPClientSocket.sendto(request, serverAddressPort)
-
+            
             print("inicio")
             if waitForReply():
 
                 data = UDPClientSocket.recvfrom(chunkSize) #Tirei o load daqui para testar
                 response = pickle.loads(data[0])
+                seqNum = data[]
 
                 bytesTransferred = response
                 serverAddressPort = data[1];
@@ -65,8 +65,8 @@ def main():
                     print("Invalid offset")
                 else:      
                     file.write(bytesTransferred[2])
-                    chunkOffset += bytesTransferred[1]
                     print(bytesTransferred[1] + 25)
+                    UDPClientSocket.sendto(pickle.dumps(1, seqNum))
                     if bytesTransferred[1] + 25 < chunkSize:
                         break
 
