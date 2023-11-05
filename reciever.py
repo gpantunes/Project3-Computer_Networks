@@ -10,9 +10,12 @@ chunkSize = 4096
 chunkOffset = 0
 
 
+
+
 UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)  #Create UDP client socket
 
 
+DONE = 3 # File received successufully
 nack1 = 1 # File does not exist
 nack2 = 2 # Lost packet
 ack = 0 # All good to go
@@ -20,6 +23,8 @@ ack = 0 # All good to go
 #Dictionary Sliding Window
 current = 0
 packet_paylod = []
+status = ack
+
 
 slidingWindow ={
     "key": current,
@@ -33,7 +38,7 @@ def getFileName():
     i = 0
     file_name = ''
     while True:
-        file_name = f'broNoWork{i}.txt'
+        file_name = f'untitled{i}.txt'
         if not os.path.exists(file_name):
             break
         i += 1
@@ -41,17 +46,16 @@ def getFileName():
 
 
 def main():
-    #global serverPort
     global serverAddressPort
 
 
-    #receiverIP = #int(sys.argv[1])
+    receiverIP = "127.0.0.1"#int(sys.argv[1])
 
-    #receiverPort = int(sys.argv[2])
+    receiverPort = 54321#int(sys.argv[2])
 
     fileName = getFileName() #int(sys.argv[3])
 
-    #serverAddressPort = (("127.0.0.1", serverPort))
+    UDPClientSocket.bind((receiverIP, receiverPort))
 
     if os.path.exists(fileName):
         print(f"nack1{nack1} - File name provided already exist")
@@ -61,29 +65,32 @@ def main():
     with open(fileName, 'wb') as file:
 
         while(True):
-           
 
-            if waitForReply():
+        
+            data, senderAddress = UDPClientSocket.recvfrom(chunkSize) #Tirei o load daqui para testar
+            status, npack, data = pickle.loads(data)
 
-                data = UDPClientSocket.recvfrom(chunkSize) #Tirei o load daqui para testar
-                response = pickle.loads(data[0])
+            if data == 3:
+                break
+            #Todo tranquilaço
+            if status == ack:        
+                if npack == slidingWindow['key']:
+                    file.write(data)
+                    slidingWindow['key'] += 1
+                else: #Go-Back-N strategy
+                    print("Lost packet")
+                    dumpedAck = pickle.dumps((nack2,slidingWindow['key']-1))
+                    UDPClientSocket.sendto(dumpedAck, senderAddress)
 
-                receivedPackets = response["key"]
-                
-                status = checkIfLostData(response)
-
-                #Todo tranquilaço
-                if status == ack:        
-                    slidingWindow['packet'] += receivedPackets['packets']   
-                    slidingWindow['key'] += receivedPackets['key']
-                    
-                    for i in range(receivedPackets['packets']):
-                        file.write(receivedPackets['packets'][i])
-
-                    dumpedAck = pickle.dumps(status)
-                    UDPClientSocket.send(dumpedAck)
-                else:   
-                    dealWithLostChilds(status)
+                dumpedAck = pickle.dumps((1,slidingWindow['key']-1))
+                UDPClientSocket.sendto(dumpedAck, senderAddress)
+            
+            elif status == DONE:
+                print("File received sucessully")
+                break
+             
+                #else:   
+            #dealWithLostChilds(status)
 
 
     
@@ -97,25 +104,16 @@ def checkIfLostData(response):
 
     for i in range(keyElements):
         if count != keyElements[i]:
-            return keyElements[i]
+            return count+1
 
     return ack
 
 
 def dealWithLostChilds(lostChild):
     dumpedLostChild = pickle.dumps(lostChild)
-    UDPClientSocket.send(dumpedLostChild)
+    UDPClientSocket.sendto(dumpedLostChild, serverAddressPort)
     return 0
 
-        
-
-def waitForReply():
-    rx, _, _ = select.select([UDPClientSocket], [], [], 1)
-    print(rx)
-    if not rx:
-        return False
-    else:
-        return True
-
+    
 
 main()
