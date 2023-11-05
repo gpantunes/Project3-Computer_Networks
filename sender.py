@@ -11,78 +11,96 @@ bufferSize = 1024
 UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM) 
 
 nack1 = 1 # File does not exist
-nack2 = 2 # Invalid offset
+nack2 = 2 # Lost packet
 ack = 0 # All good to go
 
 client_address = 0
 
 
-window = []
-windowSize = 4
-seqNum = 0
+# Dictionary Sliding window
+current = 0
+packet_payload = []
+slidingWindow ={
+     "key": current,
+     "packet": packet_payload[current]
+}
 
 
 def main():
-    global client_address
-    global seqNum
+    global client_address, current, packet_payload
     print("UDP server up and listening")
     #localPort = int(sys.argv[1])
 
+    senderIP = int(sys.argv[1])
+
+    senderPort = int(sys.argv[2])
+
+    receiverIP = int(sys.argv[3])
+
+    receiverPort = int(sys.argv[4])
+
+    fileName = sys.argv[5]
+
+    windowSizeInBlocks = int(sys.argv[6])
+
+
     UDPServerSocket.bind((localIP, localPort))
+    
 
-    bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)#Recieves the dumped request from the client
-    message = bytesAddressPair[0]  
-    client_address = bytesAddressPair[1]
+     
+     # Have to check if there's a file with such name 
+    if not os.path.exists(fileName) :
+     print(f"nack1{nack1} - File name provided doesn't exist")
+     sys.exit() #Forcely exit program
 
-    request=pickle.loads(message)#loads the dumped request from the client
-    fileName, chunkSize = request
+
+    with open(fileName, 'rb') as file:
+     data = file.read()    
+     # Create an array in each element has maximum 1024b of info
+     packet_payload = [data[i:i+1024] for i in range(0, len(data), 1024)]
+
 
     while(True):
       
-          offset = seqNum * chunkSize
-          errcode = check4Nack(fileName, offset)
+          #Gonna send windowSizeInBlocks at a time
+          bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)#Recieves the dumped request from the client
+          #Ack or Nack
+          message = bytesAddressPair[0]  
+          client_address = bytesAddressPair[1]
 
-          if checkWindow():
+          status = pickle.loads(message) #Loads the dumped request from the client
 
-          with open(fileName, 'rb') as file:
-               file.seek(offset)
-               print(offset)
-               data = file.read(chunkSize - 29) 
-               resp = pickle.dumps((errcode, seqNum, len(data), data))
-               #print(resp)
-        
-               serverReply(resp)
           
-          file.close()
+
+          if status != ack:
+              dealWithLostChilds(status)
+          
+          sendPackets = {
+               "key": [i for i in range(current ,current + windowSizeInBlocks)], # store the numbers visited
+               "packet": slidingWindow["packet"][current : current + windowSizeInBlocks] # store the data visited
+          }
+          current += windowSizeInBlocks
+          
+          
+          resp = pickle.dumps(sendPackets)
+
+          serverReply(resp)
+     
+
+def dealWithLostChilds(lostChild):
+     global current
+     current = lostChild
+     return 0  
 
 
-def check4Nack(fileName, offset):
-     errcode = 0
-     if not os.path.exists(fileName):
-          errcode = nack1
-     elif offset >= os.path.getsize(fileName):
-          errcode = nack2
-     else:
-        errcode = ack   
-     return errcode
+
      
 
 def serverReply(resp):
-  global seqNum
-
   rand = random.randint(0,10)
-  print(rand)
   if rand >=3:
-      print("tentou mandar")
-      window[seqNum] = pickle.loads(resp)
-      seqNum += 1
       UDPServerSocket.sendto(resp, client_address)
   
-
-
-def checkWindow():
-     
-
 
 main()
 
