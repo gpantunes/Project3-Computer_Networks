@@ -89,24 +89,7 @@ def main():
                 print("File received sucessully")
                 break
              
-                #else:   
-            #dealWithLostChilds(status)
-
-
-    
-# Check if the keys received are in a sequence,
-# If not, means there is data that was lost
-# @return, ack if no data lost
-# @return, keyElement[i], where it repesents number of the packet lost
-def checkIfLostData(response):
-    keyElements = response['key']
-    count = keyElements[0]
-
-    for i in range(keyElements):
-        if count != keyElements[i]:
-            return count+1
-
-    return ack
+            
 
 
 def dealWithLostChilds(lostChild):
