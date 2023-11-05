@@ -3,8 +3,8 @@ FROM python:3
 WORKDIR /app
 
 COPY sender.py /app/
-COPY pila.txt /app/
+COPY file1.txt /app/
 
 RUN pip install socketio pickle-mixin
 
-CMD ["python", "sender.py"]
+CMD ["python", "sender.py", "172.17.0.2", "20001", "172.17.0.3", "54321", "file1.txt", "4"]

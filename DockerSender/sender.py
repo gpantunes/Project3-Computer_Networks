@@ -3,13 +3,14 @@ import pickle
 import os
 import random
 import sys
+import select
 
-localIP     = "127.0.0.1"
-localPort = 20001
-bufferSize = 1024
+bufferSize = 4096
 
 UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM) 
 
+
+DONE = 3 # File sent sucessufully
 nack1 = 1 # File does not exist
 nack2 = 2 # Lost packet
 ack = 0 # All good to go
@@ -17,36 +18,28 @@ ack = 0 # All good to go
 client_address = 0
 
 
-# Dictionary Sliding window
-current = 0
-packet_payload = []
-slidingWindow ={
-     "key": current,
-     "packet": packet_payload[current]
-}
+
+senderIP = (sys.argv[1])
+
+senderPort = int(sys.argv[2])
+
+receiverIP = (sys.argv[3])
+
+receiverPort = int(sys.argv[4])
+
+fileName = sys.argv[5]
+
+windowSizeInBlocks = int(sys.argv[6])
+
+
+UDPServerSocket.bind((senderIP, senderPort))
+
 
 
 def main():
-    global client_address, current, packet_payload
     print("UDP server up and listening")
-    #localPort = int(sys.argv[1])
 
-    senderIP = int(sys.argv[1])
-
-    senderPort = int(sys.argv[2])
-
-    receiverIP = int(sys.argv[3])
-
-    receiverPort = int(sys.argv[4])
-
-    fileName = sys.argv[5]
-
-    windowSizeInBlocks = int(sys.argv[6])
-
-
-    UDPServerSocket.bind((localIP, localPort))
     
-
      
      # Have to check if there's a file with such name 
     if not os.path.exists(fileName) :
@@ -54,53 +47,72 @@ def main():
      sys.exit() #Forcely exit program
 
 
+
     with open(fileName, 'rb') as file:
-     data = file.read()    
-     # Create an array in each element has maximum 1024b of info
-     packet_payload = [data[i:i+1024] for i in range(0, len(data), 1024)]
+          data = file.read()    
+    
+    # Create an array in each element has maximum 1024b of info
+    packet_payload = [data[i:i+1024] for i in range(0, len(data), 1024)]
+
+    # Dictionary Sliding window
+    slidingWindow ={
+          "key": 1,
+          "packets": packet_payload,
+          "nextPack" : 1
+     }
 
 
-    while(True):
-      
+
+     #While there's still packets to read
+    while slidingWindow["key"] <= len(packet_payload):
+
+          #Iterates from slidingWindow['nextPack']
+          for current in range(slidingWindow["nextPack"], min(slidingWindow["nextPack"] + min(windowSizeInBlocks, 10), len(packet_payload) + 1)):
           #Gonna send windowSizeInBlocks at a time
-          bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)#Recieves the dumped request from the client
-          #Ack or Nack
-          message = bytesAddressPair[0]  
-          client_address = bytesAddressPair[1]
+               data_packet = pickle.dumps((0, current, packet_payload[current - 1]))
+               senderReply(data_packet, (receiverIP, receiverPort))
 
-          status = pickle.loads(message) #Loads the dumped request from the client
+          if waitForReply(2):
+               resp, _ = UDPServerSocket.recvfrom(bufferSize)
+               status, ack_num = pickle.loads(resp)
 
-          
-
-          if status != ack:
-              dealWithLostChilds(status)
-          
-          sendPackets = {
-               "key": [i for i in range(current ,current + windowSizeInBlocks)], # store the numbers visited
-               "packet": slidingWindow["packet"][current : current + windowSizeInBlocks] # store the data visited
-          }
-          current += windowSizeInBlocks
-          
-          
-          resp = pickle.dumps(sendPackets)
-
-          serverReply(resp)
-     
-
-def dealWithLostChilds(lostChild):
-     global current
-     current = lostChild
-     return 0  
+               if status == nack2:
+                    print(f"Lost packet{ack_num}")
+                    dealWithLostChilds(slidingWindow,ack_num)
+                    continue
 
 
+               slidingWindow["key"] = ack_num + 1
+         
+          slidingWindow["nextPack"] = slidingWindow["key"]
 
-     
+     #Send DONE message 
+    data_packet = pickle.dumps((3, 0, 0))
+    UDPServerSocket.sendto(data_packet, (receiverIP, receiverPort)) 
+    print("File sent sucessfully")     
 
-def serverReply(resp):
+
+def dealWithLostChilds(slidingWindow,lostChild):
+    slidingWindow['key'] = lostChild
+    return 0
+ 
+
+
+def senderReply(resp, address):
   rand = random.randint(0,10)
   if rand >=3:
-      UDPServerSocket.sendto(resp, client_address)
+     UDPServerSocket.sendto(resp, address)   
   
+
+
+def waitForReply(timeout):
+    rx, _, _ = select.select([UDPServerSocket], [], [], timeout)
+    if not rx:
+        return False
+    else:
+        return True
+
+
 
 main()
 

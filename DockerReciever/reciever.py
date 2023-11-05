@@ -5,7 +5,7 @@ import select
 import os
 
 transferCompleted = False
-serverAddressPort   = ("127.0.0.1", 20001)
+serverAddressPort   = ("172.17.0.2", 20001)
 chunkSize = 4096
 chunkOffset = 0
 
@@ -49,11 +49,11 @@ def main():
     global serverAddressPort
 
 
-    receiverIP = "127.0.0.1"#int(sys.argv[1])
+    receiverIP = (sys.argv[1])
 
-    receiverPort = 54321#int(sys.argv[2])
+    receiverPort = int(sys.argv[2])
 
-    fileName = getFileName() #int(sys.argv[3])
+    fileName = (sys.argv[3])
 
     UDPClientSocket.bind((receiverIP, receiverPort))
 
