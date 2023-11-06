@@ -5,7 +5,7 @@ import random
 import sys
 import select
 
-bufferSize = 4096
+windowBlockSize = 1024
 
 UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM) 
 
@@ -39,7 +39,7 @@ UDPServerSocket.bind((senderIP, senderPort))
 def main():
     print("UDP server up and listening")
 
-    
+    UDPServerSocket.sendto(pickle.dumps((windowSizeInBlocks, windowBlockSize)), (receiverIP, receiverPort))
      
      # Have to check if there's a file with such name 
     if not os.path.exists(fileName) :
@@ -73,7 +73,7 @@ def main():
                senderReply(data_packet, (receiverIP, receiverPort))
 
           if waitForReply(2):
-               resp, _ = UDPServerSocket.recvfrom(bufferSize)
+               resp, _ = UDPServerSocket.recvfrom(windowBlockSize * windowSizeInBlocks)
                status, ack_num = pickle.loads(resp)
 
                if status == nack2:

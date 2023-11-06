@@ -3,14 +3,13 @@ import pickle
 import sys
 import select
 import os
+import random
 
 transferCompleted = False
 serverAddressPort   = ("172.17.0.2", 20001)
-chunkSize = 4096
-chunkOffset = 0
 
-
-
+windowBlockSize = 0
+windowSizeInBlocks = 0
 
 UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)  #Create UDP client socket
 
@@ -57,6 +56,9 @@ def main():
 
     UDPClientSocket.bind((receiverIP, receiverPort))
 
+    windowSpecs, serverAddressPort = UDPClientSocket.recvfrom(2048)
+    windowBlockSize, windowSizeInBlocks = pickle.loads(windowSpecs)
+
     if os.path.exists(fileName):
         print(f"nack1{nack1} - File name provided already exist")
         sys.exit() # Forcely exit
@@ -66,24 +68,23 @@ def main():
 
         while(True):
 
-        
-            data, senderAddress = UDPClientSocket.recvfrom(chunkSize) #Tirei o load daqui para testar
+            data, senderAddress = UDPClientSocket.recvfrom(windowBlockSize * windowSizeInBlocks) #Tirei o load daqui para testar
             status, npack, data = pickle.loads(data)
 
             if data == 3:
                 break
-            #Todo tranquilaço
             if status == ack:        
                 if npack == slidingWindow['key']:
                     file.write(data)
                     slidingWindow['key'] += 1
+
                 else: #Go-Back-N strategy
                     print("Lost packet")
-                    dumpedAck = pickle.dumps((nack2,slidingWindow['key']-1))
-                    UDPClientSocket.sendto(dumpedAck, senderAddress)
+                    dealWithACK(nack2, slidingWindow['key']-1)
+                    
 
-                dumpedAck = pickle.dumps((1,slidingWindow['key']-1))
-                UDPClientSocket.sendto(dumpedAck, senderAddress)
+                dealWithACK(ack, slidingWindow['key']-1)
+                
             
             elif status == DONE:
                 print("File received sucessully")
@@ -92,9 +93,13 @@ def main():
             
 
 
-def dealWithLostChilds(lostChild):
-    dumpedLostChild = pickle.dumps(lostChild)
-    UDPClientSocket.sendto(dumpedLostChild, serverAddressPort)
+def dealWithACK(ackVal, lostChild):
+    rand = random.randint(0,10)
+    if rand >=3:
+        print("mandou ack")
+        dumpedLostChild = pickle.dumps((ackVal, lostChild))
+        UDPClientSocket.sendto(dumpedLostChild, serverAddressPort)
+    else: print("perdeu ack")
     return 0
 
     
