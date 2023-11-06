@@ -1,3 +1,6 @@
+#Author Guilherme Antunes nº 62621
+#Author Rodrigo Loução nº 63627
+
 FROM python:3
 
 WORKDIR /app
