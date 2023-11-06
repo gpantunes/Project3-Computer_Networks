@@ -6,7 +6,7 @@ import os
 import random
 
 transferCompleted = False
-serverAddressPort   = ("172.17.0.2", 20001)
+serverAddressPort = None
 
 windowBlockSize = 0
 windowSizeInBlocks = 0
